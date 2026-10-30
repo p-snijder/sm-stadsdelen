@@ -2,9 +2,15 @@ from pathlib import Path
 
 import pytest
 
-from stadsdelen.json_io import JsonLoadError, load_subsidy_array, load_subsidy_array_from_text
+from stadsdelen.json_io import (
+    JsonLoadError,
+    load_subsidy_array,
+    load_subsidy_array_from_text,
+)
 
-FIXTURE = Path(__file__).resolve().parent / "fixtures" / "json" / "subsidies-sample.json"
+FIXTURE = (
+    Path(__file__).resolve().parent / "fixtures" / "json" / "subsidies-sample.json"
+)
 
 
 def test_load_subsidy_array_from_fixture_preserves_extra_fields() -> None:
@@ -54,7 +60,9 @@ def test_load_subsidy_array_rejects_non_string_url() -> None:
 
 def test_load_subsidy_array_rejects_non_string_markdown() -> None:
     with pytest.raises(JsonLoadError, match="'markdown' must be a string"):
-        load_subsidy_array_from_text('[{"url": "https://example.com", "markdown": null}]')
+        load_subsidy_array_from_text(
+            '[{"url": "https://example.com", "markdown": null}]'
+        )
 
 
 def test_load_subsidy_array_missing_file() -> None:

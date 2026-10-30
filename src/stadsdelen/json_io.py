@@ -50,7 +50,9 @@ def load_subsidy_array_from_text(
 def _validate_record_fields(record: dict[str, Any], index: int) -> None:
     for key in ("url", "markdown"):
         if key not in record:
-            raise JsonLoadError(f"Array element at index {index} missing required key {key!r}")
+            raise JsonLoadError(
+                f"Array element at index {index} missing required key {key!r}"
+            )
         value = record[key]
         if not isinstance(value, str):
             raise JsonLoadError(

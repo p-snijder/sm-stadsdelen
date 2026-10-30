@@ -8,7 +8,9 @@ from stadsdelen.match import (
     match_subsidies_file,
 )
 
-FIXTURE = Path(__file__).resolve().parent / "fixtures" / "json" / "subsidies-sample.json"
+FIXTURE = (
+    Path(__file__).resolve().parent / "fixtures" / "json" / "subsidies-sample.json"
+)
 
 
 def test_match_subsidies_file_on_sample_fixture(
