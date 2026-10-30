@@ -63,8 +63,8 @@ def test_enrich_e2e_mocked_http_writes_markdown_and_bak(
     assert bak_path.exists()
     assert bak_path.read_bytes() == original
     text = target.read_text(encoding="utf-8")
-    assert "Stadsdeel: Subsidies Centrum, Subsidies Noord." in text
-    assert "Stadsdeel: Subsidies Centrum." in text
+    assert "Stadsdeel: Centrum, Noord." in text
+    assert "Stadsdeel: Centrum." in text
     assert "unknown-regeling" in text
     assert "Wrote updated JSON in place." in result.stderr + result.stdout
 

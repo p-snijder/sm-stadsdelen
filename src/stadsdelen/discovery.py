@@ -65,6 +65,16 @@ SLUG_TO_LABEL: dict[str, str] = {
     "weesp": "Weesp",
 }
 
+_SUBSIDIES_LABEL_PREFIX = "subsidies "
+
+
+def normalize_district_label(label: str) -> str:
+    """Strip a leading ``Subsidies`` from overview link text; keep stadsdeel name."""
+    cleaned = " ".join(label.split())
+    if cleaned.lower().startswith(_SUBSIDIES_LABEL_PREFIX):
+        return cleaned[len(_SUBSIDIES_LABEL_PREFIX) :].strip()
+    return cleaned
+
 DEFAULT_DISTRICT_OVERVIEW_PATHS: tuple[str, ...] = (
     "/subsidies/centrum/",
     "/subsidies/nieuwwest/",
@@ -218,5 +228,5 @@ def _district_slug_from_url(url: str) -> str | None:
 def _label_from_anchor(text: str, slug: str) -> str:
     cleaned = " ".join(text.split())
     if cleaned and cleaned.lower() not in {"lees meer", "meer info", "subsidies"}:
-        return cleaned
+        return normalize_district_label(cleaned)
     return SLUG_TO_LABEL.get(slug, slug.replace("-", " ").title())

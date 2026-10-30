@@ -13,6 +13,7 @@ from stadsdelen.discovery import (
     WARMUP_URLS,
     DistrictPage,
     is_district_overview_url,
+    normalize_district_label,
 )
 from stadsdelen.http import (
     blocked_fetch_hint,
@@ -120,7 +121,7 @@ def parse_pagination_next_url(html: str, *, page_url: str) -> str | None:
 def _district_label(district: DistrictPage) -> str:
     cleaned = district.label.strip()
     if cleaned:
-        return cleaned
+        return normalize_district_label(cleaned)
     return SLUG_TO_LABEL.get(district.slug, district.slug.replace("-", " ").title())
 
 

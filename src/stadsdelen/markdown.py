@@ -7,7 +7,8 @@ from collections.abc import Sequence
 from enum import StrEnum
 from typing import Any
 
-from stadsdelen.index import UrlToDistrictsIndex
+from stadsdelen.discovery import normalize_district_label
+from stadsdelen.index import UrlToDistrictsIndex, _sort_labels
 from stadsdelen.match import match_subsidies
 from stadsdelen.reporting import EnrichResult, MatchResult
 
@@ -29,7 +30,10 @@ class MarkdownUpdateStatus(StrEnum):
 
 def format_stadsdeel_sentence(districts: Sequence[str]) -> str:
     """Return ``Stadsdeel: a, b, c.`` with comma-separated labels."""
-    labels = [d.strip() for d in districts if d.strip()]
+    normalized = {
+        normalize_district_label(d.strip()) for d in districts if d.strip()
+    }
+    labels = _sort_labels(normalized)
     if not labels:
         raise ValueError("districts must contain at least one non-empty label")
     joined = ", ".join(labels)
@@ -59,8 +63,13 @@ def _district_sets_equal(
     existing: tuple[str, ...],
     districts: Sequence[str],
 ) -> bool:
-    new_labels = tuple(d.strip() for d in districts if d.strip())
-    return set(existing) == set(new_labels)
+    existing_norm = {
+        normalize_district_label(label) for label in existing if label.strip()
+    }
+    new_labels = {
+        normalize_district_label(d.strip()) for d in districts if d.strip()
+    }
+    return existing_norm == new_labels
 
 
 def _join_sentence_and_remainder(sentence: str, remainder: str) -> str:
@@ -78,7 +87,7 @@ def update_markdown(
     existing, remainder = parse_leading_stadsdeel(markdown)
 
     if existing is not None:
-        if _district_sets_equal(existing, districts):
+        if _district_sets_equal(existing, districts) and markdown.startswith(sentence):
             return markdown, MarkdownUpdateStatus.SKIPPED
         return sentence + remainder, MarkdownUpdateStatus.UPDATED
 

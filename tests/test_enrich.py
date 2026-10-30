@@ -22,10 +22,10 @@ def test_enrich_subsidies_updates_matched_rows_only(
     assert enrich_first.skipped == 0
 
     assert records[0]["markdown"] == (
-        "Stadsdeel: Subsidies Centrum, Subsidies Noord.\n\nFirst body paragraph."
+        "Stadsdeel: Centrum, Noord.\n\nFirst body paragraph."
     )
     assert records[1]["markdown"] == (
-        "Stadsdeel: Subsidies Centrum.\n\nCentrum-only body."
+        "Stadsdeel: Centrum.\n\nCentrum-only body."
     )
     assert records[2]["markdown"] == original[2]["markdown"]
     assert records[3]["markdown"] == original[3]["markdown"]

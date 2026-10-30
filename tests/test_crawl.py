@@ -209,7 +209,7 @@ def test_build_subsidy_index_merges_shared_url_across_districts(
     with create_client() as client:
         index, report = build_subsidy_index(districts, client=client)
     shared = "https://www.amsterdam.nl/subsidies/city-wide-regeling"
-    assert index[shared] == ["Subsidies Centrum", "Subsidies Noord"]
+    assert index[shared] == ["Centrum", "Noord"]
     assert report.index_size == 4
     assert len(report.by_district) == 2
     assert report.http_failures == ()

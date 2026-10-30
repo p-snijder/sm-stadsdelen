@@ -94,7 +94,7 @@ def test_parse_entry_fixture_finds_eight_stadsdeel_links() -> None:
     ]
     assert pages[0] == DistrictPage(
         slug="centrum",
-        label="Subsidies Centrum",
+        label="Centrum",
         url="https://www.amsterdam.nl/subsidies/centrum",
     )
     assert pages[4].url == (

@@ -62,8 +62,8 @@ def test_format_crawl_report_includes_districts_and_failures() -> None:
     text = format_crawl_report(report)
     assert "Districts crawled: 2" in text
     assert "Subsidy URLs indexed: 4" in text
-    assert "Subsidies Centrum: 3 unique links" in text
-    assert "Subsidies Noord: 2 unique links (2 page(s))" in text
+    assert "Centrum: 3 unique links" in text
+    assert "Noord: 2 unique links (2 page(s))" in text
     assert "HTTP failures:" in text
     assert "noord: blocked" in text
 

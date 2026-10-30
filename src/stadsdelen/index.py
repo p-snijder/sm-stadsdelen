@@ -6,6 +6,8 @@ import locale
 from collections import defaultdict
 from typing import TypeAlias
 
+from stadsdelen.discovery import normalize_district_label
+
 UrlToDistrictsIndex: TypeAlias = dict[str, list[str]]
 
 
@@ -29,7 +31,7 @@ class IndexBuilder:
 
     def add_district_urls(self, urls: list[str], label: str) -> None:
         """Associate ``label`` with each normalized subsidy URL."""
-        cleaned = label.strip()
+        cleaned = normalize_district_label(label.strip())
         if not cleaned:
             return
         for url in urls:
