@@ -1,6 +1,13 @@
 from pathlib import Path
 
-from stadsdelen.crawl import is_subsidy_detail_url, parse_subsidy_links
+from stadsdelen.crawl import (
+    crawl_district_subsidy_urls,
+    is_subsidy_detail_url,
+    parse_pagination_next_url,
+    parse_subsidy_links,
+)
+from stadsdelen.discovery import DistrictPage
+from stadsdelen.http import create_client
 
 DISTRICT_PAGE = "https://www.amsterdam.nl/subsidies/centrum/"
 FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "html"
@@ -93,3 +100,48 @@ def test_parse_district_noord_fixture() -> None:
         "https://www.amsterdam.nl/subsidies/buurtbudgetten-noord",
         "https://www.amsterdam.nl/subsidies/city-wide-regeling",
     ]
+
+
+def test_parse_pagination_next_url_resolves_relative_href() -> None:
+    html = """
+    <div class="resultaten">
+      <a class="startagain" href="/subsidies/zuid/pagina-2/">Volgende</a>
+    </div>
+    """
+    assert parse_pagination_next_url(
+        html, page_url="https://www.amsterdam.nl/subsidies/zuid/"
+    ) == "https://www.amsterdam.nl/subsidies/zuid/pagina-2"
+
+
+def test_parse_pagination_next_url_returns_none_when_missing() -> None:
+    assert parse_pagination_next_url("<html></html>", page_url=DISTRICT_PAGE) is None
+
+
+def test_crawl_district_subsidy_urls_follows_pagination(httpx_mock: object) -> None:
+    page1 = """
+    <div class="resultaten">
+      <div class="resultaat"><h2 class="link"><a href="/subsidies/page-one/">One</a></h2></div>
+      <a class="startagain" href="/subsidies/zuid/pagina-2/">Volgende</a>
+    </div>
+    """
+    page2 = """
+    <div class="resultaten">
+      <div class="resultaat"><h2 class="link"><a href="/subsidies/page-two/">Two</a></h2></div>
+    </div>
+    """
+    district = DistrictPage(
+        slug="zuid",
+        label="Zuid",
+        url="https://www.amsterdam.nl/subsidies/zuid",
+    )
+    httpx_mock.add_response(text=page1)
+    httpx_mock.add_response(text=page2)
+    with create_client() as client:
+        urls, stats = crawl_district_subsidy_urls(district, client=client)
+    assert urls == [
+        "https://www.amsterdam.nl/subsidies/page-one",
+        "https://www.amsterdam.nl/subsidies/page-two",
+    ]
+    assert stats.pages_fetched == 2
+    assert stats.subsidy_links_unique == 2
+    assert parse_pagination_next_url(page2, page_url=district.url) is None
