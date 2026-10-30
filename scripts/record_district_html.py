@@ -9,7 +9,12 @@ from pathlib import Path
 
 from stadsdelen.crawl import parse_subsidy_links
 from stadsdelen.discovery import WARMUP_URLS
-from stadsdelen.http import create_client, is_blocked_or_error_page, warm_session
+from stadsdelen.http import (
+    create_client,
+    is_blocked_or_error_page,
+    resolve_browser_fetch,
+    warm_session,
+)
 
 DEFAULT_OUTPUT_DIR = Path("tests/fixtures/html")
 
@@ -37,12 +42,20 @@ def main() -> int:
         default=1,
         help="Minimum subsidy links parse_subsidy_links must find",
     )
+    parser.add_argument(
+        "--browser-fetch",
+        action="store_true",
+        help="Use curl-cffi TLS impersonation (requires uv sync --extra browser).",
+    )
     args = parser.parse_args()
 
     output = args.output_dir / f"district-{args.slug}.html"
     output.parent.mkdir(parents=True, exist_ok=True)
 
-    with create_client(timeout=30.0) as client:
+    with create_client(
+        timeout=30.0,
+        browser_fetch=resolve_browser_fetch(cli_flag=args.browser_fetch),
+    ) as client:
         warm_session(client, WARMUP_URLS)
         response = client.get(args.district_url)
         text = response.text

@@ -15,6 +15,7 @@ from stadsdelen.discovery import parse_district_pages
 from stadsdelen.http import (
     create_client,
     is_blocked_or_error_page,
+    resolve_browser_fetch,
     warm_session,
 )
 
@@ -31,11 +32,19 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--entry-url", default=DEFAULT_ENTRY)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument(
+        "--browser-fetch",
+        action="store_true",
+        help="Use curl-cffi TLS impersonation (requires uv sync --extra browser).",
+    )
     args = parser.parse_args()
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
 
-    with create_client(timeout=30.0) as client:
+    with create_client(
+        timeout=30.0,
+        browser_fetch=resolve_browser_fetch(cli_flag=args.browser_fetch),
+    ) as client:
         warm_session(client, WARMUP_URLS)
         response = client.get(args.entry_url)
         text = response.text
