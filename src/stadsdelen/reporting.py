@@ -40,3 +40,22 @@ class MatchResult:
     @property
     def unmatched_count(self) -> int:
         return len(self.unmatched)
+
+
+def format_match_report(result: MatchResult) -> str:
+    """Human-readable summary for dry-run output."""
+    lines = [
+        f"JSON rows: {result.total_rows}",
+        f"Matched: {result.matched_count}",
+        f"Unmatched: {result.unmatched_count}",
+    ]
+    if result.unmatched:
+        lines.append("Unmatched URLs:")
+        for row in sorted(result.unmatched, key=lambda r: r.index):
+            if row.normalized_url:
+                lines.append(
+                    f"  [{row.index}] {row.url} -> {row.normalized_url} ({row.reason})"
+                )
+            else:
+                lines.append(f"  [{row.index}] {row.url} ({row.reason})")
+    return "\n".join(lines) + "\n"
