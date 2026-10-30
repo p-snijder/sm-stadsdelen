@@ -185,12 +185,13 @@ def test_enrich_dry_run_skips_map_out(
     target = tmp_path / "subsidies.json"
     map_path = tmp_path / "out.json"
     shutil.copy(FIXTURE, target)
+    report = CrawlReport(by_district=(), index_size=2, http_failures=())
     with (
         patch("stadsdelen.cli.warm_session"),
         patch("stadsdelen.cli.discover_district_pages"),
         patch(
             "stadsdelen.cli.build_subsidy_index",
-            return_value=(sample_match_index, CrawlReport(by_district=(), index_size=2, http_failures=())),
+            return_value=(sample_match_index, report),
         ),
     ):
         result = runner.invoke(

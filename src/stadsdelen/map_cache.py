@@ -59,7 +59,9 @@ def _parse_index(raw_index: object, *, source: str) -> UrlToDistrictsIndex:
     result: UrlToDistrictsIndex = {}
     for url, labels in raw_index.items():
         if not isinstance(url, str) or not url.strip():
-            raise MapCacheError(f"Index cache keys must be non-empty strings ({source})")
+            raise MapCacheError(
+                f"Index cache keys must be non-empty strings ({source})"
+            )
         if not isinstance(labels, list):
             raise MapCacheError(
                 f"Index entry for {url!r} must be a list of labels ({source})"

@@ -22,6 +22,12 @@ from stadsdelen.json_io import (
     load_subsidy_array,
     save_subsidy_array,
 )
+from stadsdelen.map_cache import (
+    CACHE_VERSION,
+    MapCacheError,
+    load_index_cache,
+    save_index_cache,
+)
 from stadsdelen.markdown import (
     MarkdownUpdateStatus,
     enrich_matched_rows,
@@ -42,6 +48,7 @@ from stadsdelen.reporting import (
 from stadsdelen.urls import normalize, resolve
 
 __all__ = [
+    "CACHE_VERSION",
     "CrawlError",
     "CrawlReport",
     "DiscoveryError",
@@ -49,6 +56,7 @@ __all__ = [
     "EnrichResult",
     "JsonLoadError",
     "JsonSaveError",
+    "MapCacheError",
     "MarkdownUpdateStatus",
     "MatchedRow",
     "MatchResult",
@@ -65,6 +73,7 @@ __all__ = [
     "format_enrich_run_summary",
     "format_match_report",
     "is_district_overview_url",
+    "load_index_cache",
     "load_subsidy_array",
     "match_subsidies",
     "match_subsidies_file",
@@ -72,6 +81,7 @@ __all__ = [
     "parse_district_pages",
     "resolve",
     "run_enrich",
+    "save_index_cache",
     "save_subsidy_array",
     "update_markdown",
 ]

@@ -35,7 +35,10 @@ app = typer.Typer(
 )
 
 enrich_app = typer.Typer(
-    help="Crawl stadsdeel pages, match URLs, prepend Stadsdeel markdown, save in place.",
+    help=(
+        "Crawl stadsdeel pages, match URLs, prepend Stadsdeel markdown, "
+        "save in place."
+    ),
 )
 app.add_typer(enrich_app, name="enrich")
 
@@ -270,7 +273,13 @@ def enrich_cmd(
             strict=strict,
             request_delay_seconds=request_delay,
         )
-    except (CrawlError, DiscoveryError, JsonLoadError, JsonSaveError, MapCacheError) as exc:
+    except (
+        CrawlError,
+        DiscoveryError,
+        JsonLoadError,
+        JsonSaveError,
+        MapCacheError,
+    ) as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=1) from exc
 
