@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import httpx
 
 from stadsdelen.http import (
@@ -31,3 +33,11 @@ def test_fetch_text_success(httpx_mock: object) -> None:
         response, text = fetch_text("https://www.amsterdam.nl/", client=client)
     assert response.status_code == 200
     assert text == "<html>ok</html>"
+
+
+def test_create_client_request_delay_runs_after_get(httpx_mock: object) -> None:
+    httpx_mock.add_response(text="ok")
+    with patch("stadsdelen.http.time.sleep") as sleep_mock:
+        with create_client(request_delay_seconds=0.5) as client:
+            client.get("https://www.amsterdam.nl/")
+    sleep_mock.assert_called_once_with(0.5)
