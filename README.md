@@ -2,6 +2,70 @@
 
 Python tool to crawl Amsterdam **stadsdeel** subsidy overview pages, build a subsidy URL → districts index, and prepend a `Stadsdeel:` line to matching records in a user-provided JSON array. Full product scope lives in [`.cursor/plans/stadsdeel_subsidy_mapper_471919d0.plan.md`](.cursor/plans/stadsdeel_subsidy_mapper_471919d0.plan.md).
 
+## Operator runbook
+
+Use this section to enrich a **copy** of your production JSON (never experiment on the only copy).
+
+### Prerequisites
+
+- [uv](https://docs.astral.sh/uv/) installed; run commands from a clone of this repo after `uv sync`.
+- A writable copy of your subsidies JSON array (each object needs string `url` and `markdown`).
+
+Put global flags **before** subcommand arguments (Typer option ordering), for example:
+`uv run stadsdelen --verbose enrich --dry-run path/to/subsidies.json`.
+
+### Recommended two-phase flow (offline enrich)
+
+Crawl amsterdam.nl once, then enrich JSON without further HTTP:
+
+```bash
+uv run stadsdelen crawl --request-delay 0.5 --map-out cache/subsidy-index.json
+uv run stadsdelen enrich --dry-run --map-in cache/subsidy-index.json path/to/subsidies.json
+```
+
+Read **stderr**: districts crawled, indexed URLs, matched / unmatched rows, and how many markdown fields would change (`updated` / `skipped`). When satisfied:
+
+```bash
+uv run stadsdelen enrich --map-in cache/subsidy-index.json path/to/subsidies.json
+```
+
+By default the tool copies the input to `{name}.json.bak` before overwrite. JSON is written with `indent=2`; unrelated fields are preserved.
+
+### Single-shot alternative (live crawl + enrich)
+
+```bash
+uv run stadsdelen enrich --request-delay 0.5 --dry-run path/to/subsidies.json
+uv run stadsdelen enrich --request-delay 0.5 path/to/subsidies.json
+```
+
+Optional entry page: `--entry-url 'https://www.amsterdam.nl/subsidies/subsidies-onderwerp/'`.
+
+### Safety and exit behavior
+
+| Flag | Behavior |
+|------|----------|
+| `--dry-run` | Full pipeline in memory; summary on stderr; **no JSON write** and no `--map-out` on enrich. |
+| `--no-backup` | Skip `{name}.json.bak` before overwrite (backup is **on** by default). |
+| `--strict` | Exit code **1** if any row is unmatched; **no JSON write**. |
+| `--map-in` / `--map-out` | Load or save version-1 index cache (see [Map cache](#map-cache-and-operational-hardening-slice-7)). |
+
+**Idempotency:** A second enrich with the same index should report `updated=0` for rows whose leading `Stadsdeel: ….` sentence already lists the correct districts; the file is not rewritten when nothing changed. Details: [Markdown enrichment (slice 5)](#markdown-enrichment-slice-5).
+
+**URL matching:** JSON `url` values and crawled links are compared after the same normalization rules ([URL normalization](#url-normalization)).
+
+### amsterdam.nl troubleshooting
+
+amsterdam.nl often blocks simple bots (HTTP 403 or page title **“Er is iets mis gegaan”**). Mitigations:
+
+- Use `--request-delay 0.3`–`1.0` on live `crawl` or `enrich`.
+- Prefer **two-phase** workflow: refresh `cache/subsidy-index.json` when the site is reachable, then `--map-in` for JSON work offline.
+- Developers can refresh recorded HTML fixtures with [`scripts/record_entry_html.py`](scripts/record_entry_html.py) and [`scripts/record_district_html.py`](scripts/record_district_html.py), or save pages from a normal browser into `tests/fixtures/html/`.
+- Last resort for discovery only: `STADSDELEN_DISTRICT_FALLBACK=1` or `allow_fallback=True` (built-in district URL list).
+
+The HTTP client warms cookies via [`stadsdelen.http`](src/stadsdelen/http.py) before crawling.
+
+## Implementation notes by slice
+
 **Slice 1:** URL normalization (`stadsdelen.urls`).
 
 **Slice 2:** Entry-page district discovery (`stadsdelen.discovery`).
