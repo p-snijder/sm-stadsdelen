@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "generated_at": "2026-01-01T00:00:00+00:00",
+  "entry_url": "https://www.amsterdam.nl/subsidies/subsidies-onderwerp/",
+  "index": {
+    "https://www.amsterdam.nl/subsidies/bewonersinitiatieven-centrum": [
+      "Subsidies Centrum"
+    ],
+    "https://www.amsterdam.nl/subsidies/city-wide-regeling": [
+      "Subsidies Centrum",
+      "Subsidies Noord"
+    ]
+  }
+}
