@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from stadsdelen.crawl import CrawlReport
+
 
 @dataclass(frozen=True)
 class MatchedRow:
@@ -59,6 +61,47 @@ def format_enrich_report(result: EnrichResult) -> str:
         f"Markdown skipped (already correct): {result.skipped}",
     ]
     return "\n".join(lines) + "\n"
+
+
+def format_crawl_report(report: CrawlReport) -> str:
+    """Human-readable summary of district crawl and index build."""
+    lines = [
+        f"Districts crawled: {len(report.by_district)}",
+        f"Subsidy URLs indexed: {report.index_size}",
+    ]
+    for stats in report.by_district:
+        lines.append(
+            f"  {stats.label}: {stats.subsidy_links_unique} unique links "
+            f"({stats.pages_fetched} page(s))"
+        )
+    if report.http_failures:
+        lines.append("HTTP failures:")
+        for failure in report.http_failures:
+            lines.append(f"  {failure}")
+    return "\n".join(lines) + "\n"
+
+
+def format_enrich_run_summary(
+    *,
+    crawl: CrawlReport | None,
+    match: MatchResult,
+    enrich: EnrichResult,
+    dry_run: bool,
+    wrote_file: bool,
+) -> str:
+    """Combine crawl, match, enrich sections with run footer."""
+    parts: list[str] = []
+    if crawl is not None:
+        parts.append(format_crawl_report(crawl).rstrip())
+    parts.append(format_match_report(match).rstrip())
+    parts.append(format_enrich_report(enrich).rstrip())
+    if dry_run:
+        parts.append("Dry run: no file written.")
+    elif wrote_file:
+        parts.append("Wrote updated JSON in place.")
+    else:
+        parts.append("No markdown changes; file not written.")
+    return "\n".join(parts) + "\n"
 
 
 def format_match_report(result: MatchResult) -> str:
