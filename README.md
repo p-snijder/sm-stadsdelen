@@ -74,7 +74,7 @@ Before signing off on a production run, complete [`docs/live-validation.md`](doc
 
 **Slice 3:** District crawl and subsidy URL index (`stadsdelen.crawl`, `stadsdelen.index`).
 
-**Slice 4:** JSON load, URL match against index, dry-run reporting (`stadsdelen.json_io`, `stadsdelen.match`, `stadsdelen.reporting`). **Slice 5:** idempotent `Stadsdeel:` markdown enrichment (`stadsdelen.markdown`). **Slice 6:** Typer CLI (`stadsdelen enrich`), atomic in-place JSON save with optional `.bak` backup. **Slice 7:** index cache (`--map-in` / `--map-out`), `stadsdelen crawl`, `--strict`, HTTP `--request-delay`, and `--verbose` logging.
+**Slice 4:** JSON load, URL match against index, dry-run reporting (`stadsdelen.json_io`, `stadsdelen.match`, `stadsdelen.reporting`). **Slice 5:** idempotent `Stadsdeel:` markdown enrichment (`stadsdelen.markdown`). **Slice 6:** Typer CLI (`stadsdelen enrich`), atomic in-place JSON save with optional `.bak` backup. **Slice 7:** index cache (`--map-in` / `--map-out`), `stadsdelen crawl`, `--strict`, HTTP `--request-delay`, and `--verbose` logging. **Slice 8:** GitHub Actions CI, operator runbook, [`docs/live-validation.md`](docs/live-validation.md).
 
 ## Prerequisites
 
