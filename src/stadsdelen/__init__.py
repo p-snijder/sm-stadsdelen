@@ -16,11 +16,19 @@ from stadsdelen.discovery import (
 )
 from stadsdelen.index import UrlToDistrictsIndex
 from stadsdelen.json_io import JsonLoadError, load_subsidy_array
+from stadsdelen.markdown import (
+    MarkdownUpdateStatus,
+    enrich_matched_rows,
+    enrich_subsidies,
+    update_markdown,
+)
 from stadsdelen.match import match_subsidies, match_subsidies_file
 from stadsdelen.reporting import (
+    EnrichResult,
     MatchedRow,
     MatchResult,
     UnmatchedRow,
+    format_enrich_report,
     format_match_report,
 )
 from stadsdelen.urls import normalize, resolve
@@ -30,7 +38,9 @@ __all__ = [
     "CrawlReport",
     "DiscoveryError",
     "DistrictPage",
+    "EnrichResult",
     "JsonLoadError",
+    "MarkdownUpdateStatus",
     "MatchedRow",
     "MatchResult",
     "UnmatchedRow",
@@ -38,6 +48,9 @@ __all__ = [
     "__version__",
     "build_subsidy_index",
     "discover_district_pages",
+    "enrich_matched_rows",
+    "enrich_subsidies",
+    "format_enrich_report",
     "format_match_report",
     "is_district_overview_url",
     "load_subsidy_array",
@@ -46,4 +59,5 @@ __all__ = [
     "normalize",
     "parse_district_pages",
     "resolve",
+    "update_markdown",
 ]

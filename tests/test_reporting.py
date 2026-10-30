@@ -1,4 +1,10 @@
-from stadsdelen.reporting import MatchResult, UnmatchedRow, EnrichResult, format_enrich_report, format_match_report
+from stadsdelen.reporting import (
+    EnrichResult,
+    MatchResult,
+    UnmatchedRow,
+    format_enrich_report,
+    format_match_report,
+)
 
 
 def test_format_match_report_includes_totals_and_unmatched() -> None:
