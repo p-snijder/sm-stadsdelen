@@ -42,6 +42,25 @@ class MatchResult:
         return len(self.unmatched)
 
 
+@dataclass(frozen=True)
+class EnrichResult:
+    """Counts from applying Stadsdeel markdown updates to matched rows."""
+
+    updated: int
+    skipped: int
+    matched: int
+
+
+def format_enrich_report(result: EnrichResult) -> str:
+    """Human-readable summary of markdown enrichment counts."""
+    lines = [
+        f"Matched rows enriched: {result.matched}",
+        f"Markdown updated: {result.updated}",
+        f"Markdown skipped (already correct): {result.skipped}",
+    ]
+    return "\n".join(lines) + "\n"
+
+
 def format_match_report(result: MatchResult) -> str:
     """Human-readable summary for dry-run output."""
     lines = [
