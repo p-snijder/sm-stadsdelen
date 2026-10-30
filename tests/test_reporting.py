@@ -1,4 +1,4 @@
-from stadsdelen.reporting import MatchResult, UnmatchedRow, format_match_report
+from stadsdelen.reporting import MatchResult, UnmatchedRow, EnrichResult, format_enrich_report, format_match_report
 
 
 def test_format_match_report_includes_totals_and_unmatched() -> None:
@@ -26,4 +26,13 @@ def test_format_match_report_includes_totals_and_unmatched() -> None:
     assert "Unmatched: 2" in text
     assert "unknown-regeling" in text
     assert "normalize_failed" in text
+    assert text.endswith("\n")
+
+
+def test_format_enrich_report_includes_counts() -> None:
+    result = EnrichResult(updated=2, skipped=0, matched=2)
+    text = format_enrich_report(result)
+    assert "Matched rows enriched: 2" in text
+    assert "Markdown updated: 2" in text
+    assert "Markdown skipped (already correct): 0" in text
     assert text.endswith("\n")
