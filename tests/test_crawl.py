@@ -145,3 +145,33 @@ def test_crawl_district_subsidy_urls_follows_pagination(httpx_mock: object) -> N
     assert stats.pages_fetched == 2
     assert stats.subsidy_links_unique == 2
     assert parse_pagination_next_url(page2, page_url=district.url) is None
+
+
+def test_pagination_fixtures_page1_points_to_page2() -> None:
+    page1 = (FIXTURE_DIR / "district-zuid-page1.html").read_text(encoding="utf-8")
+    base = "https://www.amsterdam.nl/subsidies/zuid/"
+    assert parse_pagination_next_url(page1, page_url=base) == (
+        "https://www.amsterdam.nl/subsidies/zuid/pagina-2"
+    )
+    assert parse_subsidy_links(page1, page_url=base) == [
+        "https://www.amsterdam.nl/subsidies/zuid-regeling-alpha",
+    ]
+
+
+def test_pagination_fixtures_collect_links_from_both_pages(httpx_mock: object) -> None:
+    page1 = (FIXTURE_DIR / "district-zuid-page1.html").read_text(encoding="utf-8")
+    page2 = (FIXTURE_DIR / "district-zuid-page2.html").read_text(encoding="utf-8")
+    district = DistrictPage(
+        slug="zuid",
+        label="Zuid",
+        url="https://www.amsterdam.nl/subsidies/zuid",
+    )
+    httpx_mock.add_response(text=page1)
+    httpx_mock.add_response(text=page2)
+    with create_client() as client:
+        urls, stats = crawl_district_subsidy_urls(district, client=client)
+    assert urls == [
+        "https://www.amsterdam.nl/subsidies/zuid-regeling-alpha",
+        "https://www.amsterdam.nl/subsidies/zuid-regeling-beta",
+    ]
+    assert stats.pages_fetched == 2
