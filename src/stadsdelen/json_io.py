@@ -82,9 +82,7 @@ def save_subsidy_array(
         try:
             shutil.copy2(file_path, backup_path)
         except OSError as exc:
-            raise JsonSaveError(
-                f"Cannot create backup at {backup_path}"
-            ) from exc
+            raise JsonSaveError(f"Cannot create backup at {backup_path}") from exc
 
     temp_path = file_path.with_suffix(file_path.suffix + ".tmp")
     try:

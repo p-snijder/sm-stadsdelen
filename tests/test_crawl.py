@@ -113,9 +113,12 @@ def test_parse_pagination_next_url_resolves_relative_href() -> None:
       <a class="startagain" href="/subsidies/zuid/pagina-2/">Volgende</a>
     </div>
     """
-    assert parse_pagination_next_url(
-        html, page_url="https://www.amsterdam.nl/subsidies/zuid/"
-    ) == "https://www.amsterdam.nl/subsidies/zuid/pagina-2"
+    assert (
+        parse_pagination_next_url(
+            html, page_url="https://www.amsterdam.nl/subsidies/zuid/"
+        )
+        == "https://www.amsterdam.nl/subsidies/zuid/pagina-2"
+    )
 
 
 def test_parse_pagination_next_url_returns_none_when_missing() -> None:

@@ -36,8 +36,7 @@ app = typer.Typer(
 
 enrich_app = typer.Typer(
     help=(
-        "Crawl stadsdeel pages, match URLs, prepend Stadsdeel markdown, "
-        "save in place."
+        "Crawl stadsdeel pages, match URLs, prepend Stadsdeel markdown, save in place."
     ),
 )
 app.add_typer(enrich_app, name="enrich")

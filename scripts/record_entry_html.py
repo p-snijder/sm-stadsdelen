@@ -47,8 +47,7 @@ def main() -> int:
             file=sys.stderr,
         )
         print(
-            "Save HTML manually from a browser into "
-            f"{args.output} and re-run tests.",
+            f"Save HTML manually from a browser into {args.output} and re-run tests.",
             file=sys.stderr,
         )
         return 1

@@ -40,8 +40,7 @@ def load_index_cache(path: str | Path) -> UrlToDistrictsIndex:
     version = data.get("version")
     if version != CACHE_VERSION:
         raise MapCacheError(
-            f"Unsupported index cache version {version!r} "
-            f"(expected {CACHE_VERSION})"
+            f"Unsupported index cache version {version!r} (expected {CACHE_VERSION})"
         )
 
     raw_index = data.get("index")

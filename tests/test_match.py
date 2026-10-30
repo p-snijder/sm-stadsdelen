@@ -24,7 +24,9 @@ def test_match_subsidies_file_on_sample_fixture(
 
     shared = result.matched[0]
     assert shared.index == 0
-    assert shared.normalized_url == "https://www.amsterdam.nl/subsidies/city-wide-regeling"
+    assert (
+        shared.normalized_url == "https://www.amsterdam.nl/subsidies/city-wide-regeling"
+    )
     assert shared.districts == ("Subsidies Centrum", "Subsidies Noord")
 
     centrum = result.matched[1]
@@ -36,7 +38,10 @@ def test_match_subsidies_file_on_sample_fixture(
 
     not_in_index = next(r for r in result.unmatched if r.reason == REASON_NOT_IN_INDEX)
     assert not_in_index.index == 2
-    assert not_in_index.normalized_url == "https://www.amsterdam.nl/subsidies/unknown-regeling"
+    assert (
+        not_in_index.normalized_url
+        == "https://www.amsterdam.nl/subsidies/unknown-regeling"
+    )
 
     normalize_failed = next(
         r for r in result.unmatched if r.reason == REASON_NORMALIZE_FAILED
