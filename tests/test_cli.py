@@ -8,10 +8,14 @@ from stadsdelen.cli import app
 from stadsdelen.crawl import CrawlReport
 from stadsdelen.discovery import DistrictPage
 from stadsdelen.index import UrlToDistrictsIndex
+from stadsdelen.map_cache import load_index_cache
 
 runner = CliRunner()
 FIXTURE = (
     Path(__file__).resolve().parent / "fixtures" / "json" / "subsidies-sample.json"
+)
+INDEX_FIXTURE = (
+    Path(__file__).resolve().parent / "fixtures" / "json" / "subsidy-index-v1.json"
 )
 
 
@@ -89,3 +93,115 @@ def test_enrich_skips_write_when_no_markdown_changes(
     combined = second.stdout + second.stderr
     assert "No markdown changes; file not written." in combined
     assert "Markdown skipped (already correct): 2" in combined
+
+
+def test_crawl_writes_map_out_with_mocked_http(
+    tmp_path: Path,
+    sample_match_index: UrlToDistrictsIndex,
+) -> None:
+    map_path = tmp_path / "index.json"
+    districts = [
+        DistrictPage(
+            slug="centrum",
+            label="Subsidies Centrum",
+            url="https://www.amsterdam.nl/subsidies/centrum",
+        ),
+    ]
+    report = CrawlReport(
+        by_district=(),
+        index_size=len(sample_match_index),
+        http_failures=(),
+    )
+    with (
+        patch("stadsdelen.cli.warm_session"),
+        patch("stadsdelen.cli.discover_district_pages", return_value=districts),
+        patch(
+            "stadsdelen.cli.build_subsidy_index",
+            return_value=(sample_match_index, report),
+        ),
+    ):
+        result = runner.invoke(
+            app,
+            ["crawl", "--map-out", str(map_path)],
+        )
+    assert result.exit_code == 0, result.stdout + result.stderr
+    assert map_path.exists()
+    assert load_index_cache(map_path) == sample_match_index
+    assert "Subsidy URLs indexed: 2" in result.stderr + result.stdout
+
+
+def test_enrich_map_in_skips_live_crawl(
+    tmp_path: Path,
+    sample_match_index: UrlToDistrictsIndex,
+) -> None:
+    target = tmp_path / "subsidies.json"
+    shutil.copy(FIXTURE, target)
+    with (
+        patch("stadsdelen.cli.warm_session") as warm,
+        patch("stadsdelen.cli.discover_district_pages") as discover,
+        patch("stadsdelen.cli.build_subsidy_index") as build,
+    ):
+        result = runner.invoke(
+            app,
+            [
+                "enrich",
+                "--dry-run",
+                "--map-in",
+                str(INDEX_FIXTURE),
+                str(target),
+            ],
+        )
+    warm.assert_not_called()
+    discover.assert_not_called()
+    build.assert_not_called()
+    assert result.exit_code == 0
+    assert "Markdown updated: 2" in result.stdout + result.stderr
+
+
+def test_enrich_strict_exits_on_unmatched_rows(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "subsidies.json"
+    shutil.copy(FIXTURE, target)
+    result = runner.invoke(
+        app,
+        [
+            "enrich",
+            "--strict",
+            "--dry-run",
+            "--map-in",
+            str(INDEX_FIXTURE),
+            str(target),
+        ],
+    )
+    assert result.exit_code == 1
+    assert "Unmatched: 2" in result.stdout + result.stderr
+
+
+def test_enrich_dry_run_skips_map_out(
+    tmp_path: Path,
+    sample_match_index: UrlToDistrictsIndex,
+) -> None:
+    target = tmp_path / "subsidies.json"
+    map_path = tmp_path / "out.json"
+    shutil.copy(FIXTURE, target)
+    with (
+        patch("stadsdelen.cli.warm_session"),
+        patch("stadsdelen.cli.discover_district_pages"),
+        patch(
+            "stadsdelen.cli.build_subsidy_index",
+            return_value=(sample_match_index, CrawlReport(by_district=(), index_size=2, http_failures=())),
+        ),
+    ):
+        result = runner.invoke(
+            app,
+            [
+                "enrich",
+                "--dry-run",
+                "--map-out",
+                str(map_path),
+                str(target),
+            ],
+        )
+    assert result.exit_code == 0
+    assert not map_path.exists()
