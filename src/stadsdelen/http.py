@@ -30,13 +30,36 @@ DEFAULT_HEADERS = {
 RETRYABLE_STATUS_CODES = frozenset({429, 503})
 
 
-def create_client(**kwargs: object) -> httpx.Client:
+def create_client(
+    *,
+    request_delay_seconds: float = 0.0,
+    **kwargs: object,
+) -> httpx.Client:
     """Return a sync client with default browser-like headers."""
     headers = dict(DEFAULT_HEADERS)
     extra = kwargs.pop("headers", None)
     if extra:
         headers.update(extra)
-    return httpx.Client(headers=headers, follow_redirects=True, **kwargs)
+
+    event_hooks: dict[str, list] = dict(kwargs.pop("event_hooks", {}) or {})
+    if request_delay_seconds > 0:
+        delay = request_delay_seconds
+
+        def _pace_response(response: httpx.Response) -> None:
+            time.sleep(delay)
+
+        response_hooks = list(event_hooks.get("response", []))
+        response_hooks.append(_pace_response)
+        event_hooks["response"] = response_hooks
+
+    client_kwargs: dict[str, object] = {
+        "headers": headers,
+        "follow_redirects": True,
+        **kwargs,
+    }
+    if event_hooks:
+        client_kwargs["event_hooks"] = event_hooks
+    return httpx.Client(**client_kwargs)
 
 
 def fetch_text(
