@@ -227,7 +227,7 @@ def test_build_subsidy_index_records_http_failure(httpx_mock: object) -> None:
             url="https://www.amsterdam.nl/subsidies/centrum",
         ),
     ]
-    with create_client() as client, pytest.raises(CrawlError):
+    with create_client(auto_retry_on_block=False) as client, pytest.raises(CrawlError):
         build_subsidy_index(districts, client=client)
 
 
@@ -252,7 +252,7 @@ def test_build_subsidy_index_partial_failure_still_builds_index(
             url="https://www.amsterdam.nl/subsidies/noord",
         ),
     ]
-    with create_client() as client:
+    with create_client(auto_retry_on_block=False) as client:
         index, report = build_subsidy_index(districts, client=client)
     assert len(index) == 3
     assert len(report.http_failures) == 1

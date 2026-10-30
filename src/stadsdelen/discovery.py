@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 from urllib.parse import urlparse
@@ -9,8 +10,15 @@ from urllib.parse import urlparse
 import httpx
 from bs4 import BeautifulSoup
 
-from stadsdelen.http import create_client, is_blocked_or_error_page, warm_session
+from stadsdelen.http import (
+    blocked_fetch_hint,
+    create_client,
+    is_blocked_or_error_page,
+    warm_session,
+)
 from stadsdelen.urls import CANONICAL_HOST, normalize, resolve
+
+log = logging.getLogger(__name__)
 
 DEFAULT_ENTRY_URL = "https://www.amsterdam.nl/subsidies/subsidies-onderwerp/"
 
@@ -120,15 +128,25 @@ def discover_district_pages(
         response = http.get(entry_url)
         text = response.text
         if is_blocked_or_error_page(response, text):
-            msg = (
-                f"Blocked or error page when fetching entry URL "
-                f"(HTTP {response.status_code}): {entry_url}"
-            )
-            raise DiscoveryError(msg)
-
-        pages = parse_district_pages(text, page_url=str(response.url))
-        if len(pages) < min_districts and _fallback_enabled(allow_fallback):
-            pages = fallback_district_pages(entry_url)
+            if _fallback_enabled(allow_fallback):
+                log.warning(
+                    "Entry URL blocked (HTTP %s); using built-in district "
+                    "overview list: %s",
+                    response.status_code,
+                    entry_url,
+                )
+                pages = fallback_district_pages(entry_url)
+            else:
+                msg = (
+                    f"Blocked or error page when fetching entry URL "
+                    f"(HTTP {response.status_code}): {entry_url}"
+                    f"{blocked_fetch_hint()}"
+                )
+                raise DiscoveryError(msg)
+        else:
+            pages = parse_district_pages(text, page_url=str(response.url))
+            if len(pages) < min_districts and _fallback_enabled(allow_fallback):
+                pages = fallback_district_pages(entry_url)
 
         if len(pages) < min_districts:
             raise DiscoveryError(

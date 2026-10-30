@@ -118,8 +118,25 @@ def test_discover_district_pages_raises_on_blocked_response(
         status_code=403,
         text=f"<html><title>{ERROR_PAGE_TITLE_FRAGMENT}</title></html>",
     )
-    with create_client() as client, pytest.raises(DiscoveryError, match="Blocked"):
+    with create_client(auto_retry_on_block=False) as client, pytest.raises(
+        DiscoveryError, match="Blocked"
+    ):
         discover_district_pages(ENTRY, client=client)
+
+
+def test_discover_district_pages_fallback_when_entry_blocked(
+    httpx_mock: object,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("STADSDELEN_DISTRICT_FALLBACK", "1")
+    httpx_mock.add_response(
+        status_code=403,
+        text=f"<html><title>{ERROR_PAGE_TITLE_FRAGMENT}</title></html>",
+    )
+    with create_client(auto_retry_on_block=False) as client:
+        pages = discover_district_pages(ENTRY, client=client)
+    assert len(pages) == 8
+    assert pages[0].slug == "centrum"
 
 
 @pytest.mark.network
