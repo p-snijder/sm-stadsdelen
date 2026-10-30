@@ -8,7 +8,7 @@ Python tool to crawl Amsterdam **stadsdeel** subsidy overview pages, build a sub
 
 **Slice 3:** District crawl and subsidy URL index (`stadsdelen.crawl`, `stadsdelen.index`).
 
-**Slice 4:** JSON load, URL match against index, dry-run reporting (`stadsdelen.json_io`, `stadsdelen.match`, `stadsdelen.reporting`). **Slice 5:** idempotent `Stadsdeel:` markdown enrichment (`stadsdelen.markdown`). CLI and in-place save are not implemented yet.
+**Slice 4:** JSON load, URL match against index, dry-run reporting (`stadsdelen.json_io`, `stadsdelen.match`, `stadsdelen.reporting`). **Slice 5:** idempotent `Stadsdeel:` markdown enrichment (`stadsdelen.markdown`). **Slice 6:** Typer CLI (`stadsdelen enrich`), atomic in-place JSON save with optional `.bak` backup.
 
 ## Prerequisites
 
@@ -139,6 +139,41 @@ API:
 - [x] District set change replaces prefix only (see `tests/test_markdown.py`).
 - [x] Objects without index entry unchanged (`tests/test_enrich.py`).
 - [x] No file write in this slice.
+
+## CLI and in-place save (slice 6)
+
+Run the full pipeline (live crawl of amsterdam.nl by default, then match, enrich, save):
+
+```bash
+uv run stadsdelen enrich path/to/subsidies.json
+```
+
+Put flags **before** the JSON path (Typer option ordering):
+
+```bash
+uv run stadsdelen enrich --dry-run path/to/subsidies.json
+uv run stadsdelen enrich --no-backup path/to/subsidies.json
+uv run stadsdelen enrich --entry-url 'https://www.amsterdam.nl/subsidies/subsidies-onderwerp/' path/to/subsidies.json
+```
+
+| Flag | Behavior |
+|------|----------|
+| `--dry-run` | Crawl and enrich in memory; print summary to stderr; **no file write**. |
+| `--no-backup` | Skip copying the input file to `{name}.json.bak` before overwrite (backup is **on** by default). |
+| `--entry-url` | Entry page for stadsdeel discovery (default: subsidies-onderwerp URL). |
+
+**Write rules:** The JSON file is updated **in place** with `indent=2` (whitespace may change). If no matched row needs a markdown update (`updated == 0`), the file is not rewritten. On failure during save, the original file is left intact (atomic temp + rename).
+
+**Reporting:** Crawl, match, and enrich counts are printed to **stderr** after each run.
+
+**Not in slice 6:** `--map-in`, `--map-out`, and `--strict` (slice 7).
+
+### Slice 6 acceptance
+
+- [x] `--dry-run` performs no write and reports would-update counts.
+- [x] Backup created by default before overwrite; `--no-backup` disables.
+- [x] E2E test with mocked HTTP + fixture JSON (`tests/test_cli_e2e.py`).
+- [x] stderr summary includes districts, indexed URLs, matched/unmatched, updated/skipped.
 
 ## URL normalization
 
