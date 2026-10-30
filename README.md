@@ -19,7 +19,8 @@ Put global flags **before** subcommand arguments (Typer option ordering), for ex
 Crawl amsterdam.nl once, then enrich JSON without further HTTP:
 
 ```bash
-uv run stadsdelen crawl --request-delay 0.5 --map-out cache/subsidy-index.json
+uv sync --extra browser
+uv run stadsdelen crawl --browser-fetch --request-delay 0.5 --map-out cache/subsidy-index.json
 uv run stadsdelen enrich --dry-run --map-in cache/subsidy-index.json path/to/subsidies.json
 ```
 
@@ -57,12 +58,21 @@ Optional entry page: `--entry-url 'https://www.amsterdam.nl/subsidies/subsidies-
 
 amsterdam.nl often blocks simple bots (HTTP 403 or page title **“Er is iets mis gegaan”**). Mitigations:
 
-- Use `--request-delay 0.3`–`1.0` on live `crawl` or `enrich`.
-- Prefer **two-phase** workflow: refresh `cache/subsidy-index.json` when the site is reachable, then `--map-in` for JSON work offline.
-- Developers can refresh recorded HTML fixtures with [`scripts/record_entry_html.py`](scripts/record_entry_html.py) and [`scripts/record_district_html.py`](scripts/record_district_html.py), or save pages from a normal browser into `tests/fixtures/html/`.
-- Last resort for discovery only: `STADSDELEN_DISTRICT_FALLBACK=1` or `allow_fallback=True` (built-in district URL list).
+- Install browser fetch and pass **`--browser-fetch`** (or set `STADSDELEN_BROWSER_FETCH=1`):
 
-The HTTP client warms cookies via [`stadsdelen.http`](src/stadsdelen/http.py) before crawling.
+  ```bash
+  uv sync --extra browser
+  uv run stadsdelen crawl --browser-fetch --request-delay 0.5 --map-out cache/subsidy-index.json
+  ```
+
+  When `curl-cffi` is installed, the client also **auto-retries** blocked responses with TLS impersonation before failing.
+
+- Use `--request-delay 0.3`–`1.0` on live `crawl` or `enrich` (rate limits; does not fix fingerprint blocks on its own).
+- Prefer **two-phase** workflow: refresh `cache/subsidy-index.json` when the site is reachable, then `--map-in` for JSON work offline.
+- Developers can refresh recorded HTML fixtures with [`scripts/record_entry_html.py`](scripts/record_entry_html.py) and [`scripts/record_district_html.py`](scripts/record_district_html.py) (`--browser-fetch` when needed), or save pages from a normal browser into `tests/fixtures/html/`.
+- Last resort for **discovery only** (not district listing pages): `STADSDELEN_DISTRICT_FALLBACK=1` or `allow_fallback=True` uses the built-in district URL list when the entry page is blocked or parses too few links.
+
+The HTTP client warms cookies via [`stadsdelen.http`](src/stadsdelen/http.py) before crawling (plain httpx path).
 
 Before signing off on a production run, complete [`docs/live-validation.md`](docs/live-validation.md).
 
@@ -122,12 +132,12 @@ API:
 Recorded HTML for CI lives in [`tests/fixtures/html/entry-subsidies-onderwerp.html`](tests/fixtures/html/entry-subsidies-onderwerp.html). Refresh it with:
 
 ```bash
-uv run python scripts/record_entry_html.py
+uv run python scripts/record_entry_html.py --browser-fetch
 ```
 
-The recorder uses a browser-like httpx session (warm-up requests + cookies). If amsterdam.nl returns HTTP 403 or **“Er is iets mis gegaan”**, save the page from a normal browser into the fixture path above and commit the file.
+The recorder uses a browser-like session (warm-up GETs + cookies on the httpx path, or curl-cffi with `--browser-fetch`). If amsterdam.nl returns HTTP 403 or **“Er is iets mis gegaan”**, retry with `--browser-fetch` after `uv sync --extra browser`, or save the page from a normal browser into the fixture path above and commit the file.
 
-**Fallback:** Set `STADSDELEN_DISTRICT_FALLBACK=1` or pass `allow_fallback=True` to use the built-in canonical district URL list when parsing finds too few links (last resort; default off).
+**Fallback:** Set `STADSDELEN_DISTRICT_FALLBACK=1` or pass `allow_fallback=True` to use the built-in canonical district URL list when the entry page is blocked or parsing finds too few links (last resort; default off).
 
 ### Slice 2 acceptance
 
@@ -256,7 +266,8 @@ uv run stadsdelen enrich --entry-url 'https://www.amsterdam.nl/subsidies/subsidi
 Two-phase workflow: crawl once (live HTTP), enrich JSON offline with the saved index.
 
 ```bash
-uv run stadsdelen crawl --map-out cache/subsidy-index.json
+uv sync --extra browser
+uv run stadsdelen crawl --browser-fetch --map-out cache/subsidy-index.json
 uv run stadsdelen enrich --map-in cache/subsidy-index.json path/to/subsidies.json
 ```
 
@@ -282,6 +293,7 @@ Shared on **`stadsdelen crawl`** and **`stadsdelen enrich`** (place before subco
 | `--verbose` | INFO logs from the `stadsdelen` logger |
 | `--log-level` | `warning`, `info`, or `debug` (overrides `--verbose`) |
 | `--request-delay SECONDS` | Pause after each HTTP response during live crawl (default `0`; try `0.3–1.0` on amsterdam.nl) |
+| `--browser-fetch` | Use curl-cffi TLS impersonation for live HTTP (`uv sync --extra browser`) |
 
 **`stadsdelen crawl`** (requires `--map-out`):
 

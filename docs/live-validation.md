@@ -37,7 +37,8 @@ Using `--map-in` with a fresh or trusted cache **or** a live crawl dry-run:
 
 ## 5. Crawl freshness (when using live HTTP)
 
-- [ ] `uv run stadsdelen crawl --request-delay 0.5 --map-out cache/subsidy-index.json`
+- [ ] `uv sync --extra browser`
+- [ ] `uv run stadsdelen crawl --browser-fetch --request-delay 0.5 --map-out cache/subsidy-index.json`
 - [ ] stderr shows expected district count (≥ 7) and a reasonable indexed URL count
 - [ ] Cache path noted: `________________________________`
 
