@@ -8,7 +8,7 @@ Python tool to crawl Amsterdam **stadsdeel** subsidy overview pages, build a sub
 
 **Slice 3:** District crawl and subsidy URL index (`stadsdelen.crawl`, `stadsdelen.index`).
 
-**Slice 4:** JSON load, URL match against index, dry-run reporting (`stadsdelen.json_io`, `stadsdelen.match`, `stadsdelen.reporting`). **Slice 5:** idempotent `Stadsdeel:` markdown enrichment (`stadsdelen.markdown`). **Slice 6:** Typer CLI (`stadsdelen enrich`), atomic in-place JSON save with optional `.bak` backup.
+**Slice 4:** JSON load, URL match against index, dry-run reporting (`stadsdelen.json_io`, `stadsdelen.match`, `stadsdelen.reporting`). **Slice 5:** idempotent `Stadsdeel:` markdown enrichment (`stadsdelen.markdown`). **Slice 6:** Typer CLI (`stadsdelen enrich`), atomic in-place JSON save with optional `.bak` backup. **Slice 7:** index cache (`--map-in` / `--map-out`), `stadsdelen crawl`, `--strict`, HTTP `--request-delay`, and `--verbose` logging.
 
 ## Prerequisites
 
@@ -166,14 +166,69 @@ uv run stadsdelen enrich --entry-url 'https://www.amsterdam.nl/subsidies/subsidi
 
 **Reporting:** Crawl, match, and enrich counts are printed to **stderr** after each run.
 
-**Not in slice 6:** `--map-in`, `--map-out`, and `--strict` (slice 7).
-
 ### Slice 6 acceptance
 
 - [x] `--dry-run` performs no write and reports would-update counts.
 - [x] Backup created by default before overwrite; `--no-backup` disables.
 - [x] E2E test with mocked HTTP + fixture JSON (`tests/test_cli_e2e.py`).
 - [x] stderr summary includes districts, indexed URLs, matched/unmatched, updated/skipped.
+
+## Map cache and operational hardening (slice 7)
+
+Two-phase workflow: crawl once (live HTTP), enrich JSON offline with the saved index.
+
+```bash
+uv run stadsdelen crawl --map-out cache/subsidy-index.json
+uv run stadsdelen enrich --map-in cache/subsidy-index.json path/to/subsidies.json
+```
+
+You can still run a single live `enrich` without a cache (slice 6 behavior). Optional `--map-out` on `enrich` writes the **effective** index after a successful non-dry-run (from crawl or from `--map-in`).
+
+### Index cache format (version 1)
+
+| Field | Meaning |
+|-------|---------|
+| `version` | Must be `1` |
+| `generated_at` | UTC ISO8601 timestamp when written |
+| `entry_url` | Optional; entry page used when the index was crawled |
+| `index` | Object: normalized subsidy URL → array of stadsdeel label strings |
+
+Example fixture: [`tests/fixtures/json/subsidy-index-v1.json`](tests/fixtures/json/subsidy-index-v1.json). API: `load_index_cache`, `save_index_cache` in [`stadsdelen.map_cache`](src/stadsdelen/map_cache.py).
+
+### Additional CLI flags
+
+Shared on **`stadsdelen crawl`** and **`stadsdelen enrich`** (place before subcommand arguments):
+
+| Flag | Behavior |
+|------|----------|
+| `--verbose` | INFO logs from the `stadsdelen` logger |
+| `--log-level` | `warning`, `info`, or `debug` (overrides `--verbose`) |
+| `--request-delay SECONDS` | Pause after each HTTP response during live crawl (default `0`; try `0.3–1.0` on amsterdam.nl) |
+
+**`stadsdelen crawl`** (requires `--map-out`):
+
+| Flag | Behavior |
+|------|----------|
+| `--map-out PATH` | Write version-1 index cache (required) |
+| `--entry-url` | Same as enrich |
+
+**`stadsdelen enrich`** (extends slice 6):
+
+| Flag | Behavior |
+|------|----------|
+| `--map-in PATH` | Load index from cache; **no HTTP** |
+| `--map-out PATH` | Write index cache after success (skipped on `--dry-run`) |
+| `--strict` | Exit code 1 if any JSON row is unmatched (`not_in_index` or `normalize_failed`); no JSON write |
+
+When `--map-in` is set, `--entry-url` does not trigger a crawl (only used as metadata if you also write `--map-out` after a live crawl).
+
+### Slice 7 acceptance
+
+- [x] `stadsdelen crawl --map-out` builds cache from mocked/live crawl.
+- [x] `enrich --map-in` skips discovery/crawl and matches fixture cache.
+- [x] E2E: crawl → map-in enrich equals live enrich on same JSON (`tests/test_cli_e2e.py`).
+- [x] `--strict` fails before write when unmatched rows remain.
+- [x] `--dry-run` does not write JSON or `--map-out` cache.
 
 ## URL normalization
 
