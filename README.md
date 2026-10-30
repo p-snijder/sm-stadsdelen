@@ -4,7 +4,9 @@ Python tool to crawl Amsterdam **stadsdeel** subsidy overview pages, build a sub
 
 **Slice 1:** URL normalization (`stadsdelen.urls`).
 
-**Slice 2:** Entry-page district discovery (`stadsdelen.discovery`). JSON enrichment and CLI are not implemented yet.
+**Slice 2:** Entry-page district discovery (`stadsdelen.discovery`).
+
+**Slice 3:** District crawl and subsidy URL index (`stadsdelen.crawl`, `stadsdelen.index`). JSON enrichment and CLI are not implemented yet.
 
 ## Prerequisites
 
@@ -53,6 +55,42 @@ The recorder uses a browser-like httpx session (warm-up requests + cookies). If 
 - [x] `discover_district_pages` mocked HTTP integration tests pass.
 - [x] Optional `@pytest.mark.network` smoke test documented (`uv run pytest -m network`).
 - [x] Entry-page link source documented (sidebar **Per stadsdeel/-gebied**).
+
+## District crawl and index (slice 3)
+
+After discovery, crawl each stadsdeel overview page and build **`UrlToDistrictsIndex`**: normalized subsidy detail URL → sorted stadsdeel labels.
+
+API:
+
+- `build_subsidy_index(district_pages)` — HTTP crawl all districts, merge multi-district URLs, return `(index, CrawlReport)`.
+- `parse_subsidy_links(html, page_url=...)` — pure parser for one listing page (`.resultaten .resultaat h2.link a`).
+- `parse_pagination_next_url(html, page_url=...)` — follow `a.startagain` (“Volgende”) links.
+- `crawl_district_subsidy_urls(district, client=...)` — one district including pagination.
+
+**Labels:** Index entries use `DistrictPage.label` from discovery (e.g. anchor text **Subsidies Centrum**).
+
+**Pagination (master-plan question #3):** District listings that exceed one page expose the next page via **`a.startagain`**. Because URL normalization strips query strings, pagination must use **path-based** next URLs (not `?page=2`). Offline tests use recorded-style fixtures under [`tests/fixtures/html/`](tests/fixtures/html/) (`district-centrum.html`, `district-noord.html`, `district-zuid-page1.html` / `page2`). Automated httpx recording often gets HTTP 403 on district URLs; save HTML from a browser when needed.
+
+Record or refresh a district fixture:
+
+```bash
+uv run python scripts/record_district_html.py \
+  --district-url "https://www.amsterdam.nl/subsidies/centrum/" \
+  --slug centrum
+```
+
+Optional live crawl smoke (first two discovered districts):
+
+```bash
+uv run pytest -m network tests/test_crawl.py::test_build_subsidy_index_live_smoke
+```
+
+### Slice 3 acceptance
+
+- [x] Fixture-based parser tests for ≥ two districts (`uv run pytest`).
+- [x] Pagination covered via two-page zuid fixtures + `startagain` parser.
+- [x] Same subsidy URL on two districts yields two labels in the index.
+- [x] `CrawlReport.by_district` exposes per-district link counts.
 
 ## URL normalization
 
