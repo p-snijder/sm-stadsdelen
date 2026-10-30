@@ -77,3 +77,37 @@ def test_enrich_e2e_mocked_http_writes_markdown_and_bak(
     assert second.exit_code == 0
     assert target.read_bytes() == after_first
     assert "No markdown changes; file not written." in second.stderr + second.stdout
+
+
+def test_crawl_map_out_then_enrich_map_in_matches_live_enrich(
+    tmp_path: Path,
+    httpx_mock: object,
+) -> None:
+    map_path = tmp_path / "index.json"
+    target_a = tmp_path / "a.json"
+    target_b = tmp_path / "b.json"
+    payload = JSON_FIXTURE.read_text(encoding="utf-8")
+    target_a.write_text(payload, encoding="utf-8")
+    target_b.write_text(payload, encoding="utf-8")
+
+    _register_crawl_responses(httpx_mock)
+    crawl = runner.invoke(
+        app,
+        ["crawl", "--map-out", str(map_path), "--entry-url", ENTRY],
+    )
+    assert crawl.exit_code == 0, crawl.stdout + crawl.stderr
+    assert map_path.exists()
+
+    _register_crawl_responses(httpx_mock)
+    live = runner.invoke(
+        app,
+        ["enrich", "--no-backup", "--entry-url", ENTRY, str(target_a)],
+    )
+    assert live.exit_code == 0, live.stdout + live.stderr
+
+    cached = runner.invoke(
+        app,
+        ["enrich", "--no-backup", "--map-in", str(map_path), str(target_b)],
+    )
+    assert cached.exit_code == 0, cached.stdout + cached.stderr
+    assert target_a.read_text(encoding="utf-8") == target_b.read_text(encoding="utf-8")
