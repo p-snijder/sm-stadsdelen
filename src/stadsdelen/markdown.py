@@ -10,7 +10,7 @@ PREFIX_LABEL = "Stadsdeel"
 
 # Leading first sentence only (start of string): Stadsdeel: labels ending with a period.
 _LEADING_STADSDEEL = re.compile(
-    r"^Stadsdeel:\s*(.+?)\.\s*",
+    r"^Stadsdeel:\s*(.+?)\.",
     re.DOTALL,
 )
 
@@ -74,6 +74,6 @@ def update_markdown(
     if existing is not None:
         if _district_sets_equal(existing, districts):
             return markdown, MarkdownUpdateStatus.SKIPPED
-        return _join_sentence_and_remainder(sentence, remainder), MarkdownUpdateStatus.UPDATED
+        return sentence + remainder, MarkdownUpdateStatus.UPDATED
 
     return _join_sentence_and_remainder(sentence, markdown), MarkdownUpdateStatus.UPDATED
