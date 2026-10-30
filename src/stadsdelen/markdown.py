@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
-from enum import Enum
+from enum import StrEnum
+from typing import Any
+
+from stadsdelen.index import UrlToDistrictsIndex
+from stadsdelen.match import match_subsidies
+from stadsdelen.reporting import EnrichResult, MatchResult
 
 PREFIX_LABEL = "Stadsdeel"
 
@@ -15,7 +20,7 @@ _LEADING_STADSDEEL = re.compile(
 )
 
 
-class MarkdownUpdateStatus(str, Enum):
+class MarkdownUpdateStatus(StrEnum):
     """Outcome of applying district labels to one markdown field."""
 
     UPDATED = "updated"
@@ -39,7 +44,8 @@ def _split_district_labels(label_text: str) -> tuple[str, ...]:
 def parse_leading_stadsdeel(markdown: str) -> tuple[tuple[str, ...] | None, str]:
     """Parse a leading Stadsdeel sentence if present.
 
-    Returns ``(districts, remainder)`` when a prefix is found, else ``(None, markdown)``.
+    Returns ``(districts, remainder)`` when a prefix is found, else
+    ``(None, markdown)``.
     """
     match = _LEADING_STADSDEEL.match(markdown)
     if match is None:
@@ -67,7 +73,7 @@ def update_markdown(
     markdown: str,
     districts: Sequence[str],
 ) -> tuple[str, MarkdownUpdateStatus]:
-    """Prepend or replace the leading Stadsdeel sentence; preserve the body remainder."""
+    """Prepend or replace the leading Stadsdeel sentence; preserve body."""
     sentence = format_stadsdeel_sentence(districts)
     existing, remainder = parse_leading_stadsdeel(markdown)
 
@@ -76,4 +82,40 @@ def update_markdown(
             return markdown, MarkdownUpdateStatus.SKIPPED
         return sentence + remainder, MarkdownUpdateStatus.UPDATED
 
-    return _join_sentence_and_remainder(sentence, markdown), MarkdownUpdateStatus.UPDATED
+    return (
+        _join_sentence_and_remainder(sentence, markdown),
+        MarkdownUpdateStatus.UPDATED,
+    )
+
+
+def enrich_matched_rows(
+    records: list[dict[str, Any]],
+    match_result: MatchResult,
+) -> EnrichResult:
+    """Apply Stadsdeel prefix updates to each row in ``match_result.matched``."""
+    updated = 0
+    skipped = 0
+
+    for row in match_result.matched:
+        new_markdown, status = update_markdown(
+            records[row.index]["markdown"],
+            row.districts,
+        )
+        records[row.index]["markdown"] = new_markdown
+        if status is MarkdownUpdateStatus.UPDATED:
+            updated += 1
+        else:
+            skipped += 1
+
+    matched = match_result.matched_count
+    return EnrichResult(updated=updated, skipped=skipped, matched=matched)
+
+
+def enrich_subsidies(
+    records: list[dict[str, Any]],
+    index: UrlToDistrictsIndex,
+) -> tuple[MatchResult, EnrichResult]:
+    """Match records to the index and enrich matched rows in place."""
+    match_result = match_subsidies(records, index)
+    enrich_result = enrich_matched_rows(records, match_result)
+    return match_result, enrich_result
