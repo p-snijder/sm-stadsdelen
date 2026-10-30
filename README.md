@@ -8,7 +8,7 @@ Python tool to crawl Amsterdam **stadsdeel** subsidy overview pages, build a sub
 
 **Slice 3:** District crawl and subsidy URL index (`stadsdelen.crawl`, `stadsdelen.index`).
 
-**Slice 4:** JSON load, URL match against index, dry-run reporting (`stadsdelen.json_io`, `stadsdelen.match`, `stadsdelen.reporting`). Markdown enrichment and CLI are not implemented yet.
+**Slice 4:** JSON load, URL match against index, dry-run reporting (`stadsdelen.json_io`, `stadsdelen.match`, `stadsdelen.reporting`). **Slice 5:** idempotent `Stadsdeel:` markdown enrichment (`stadsdelen.markdown`). CLI and in-place save are not implemented yet.
 
 ## Prerequisites
 
@@ -116,6 +116,29 @@ API:
 - [x] Invalid JSON / non-array / missing `url` or `markdown` fails fast with clear `JsonLoadError`.
 - [x] Unmatched URLs listed; matched count correct on synthetic fixture (`uv run pytest`).
 - [x] No output file write; matching is side-effect free on disk.
+
+## Markdown enrichment (slice 5)
+
+For rows matched to the index, prepend or update a leading **Stadsdeel** sentence on `markdown`. Updates happen **in memory only**—slice 6 writes the JSON file in place.
+
+**Prefix format:** `Stadsdeel: {label1}, {label2}.` as the first sentence, then `\n\n` before the existing body when prepending. Labels use the same strings as the crawl index (e.g. `Subsidies Centrum`).
+
+**Idempotency:** If the leading sentence already lists the same district set (order ignored), the field is unchanged. If the set differs, only the prefix sentence is replaced; the body remainder is preserved.
+
+API:
+
+- `update_markdown(markdown, districts)` — pure single-field update; returns `(new_markdown, MarkdownUpdateStatus)`.
+- `enrich_matched_rows(records, match_result)` — mutate matched rows only; returns `EnrichResult`.
+- `enrich_subsidies(records, index)` — `match_subsidies` + `enrich_matched_rows`.
+- `format_enrich_report(enrich_result)` — updated vs skipped counts for dry-run (slice 6).
+
+### Slice 5 acceptance
+
+- [x] First run prepends correct sentence on matched rows (`uv run pytest`).
+- [x] Second run unchanged (idempotent).
+- [x] District set change replaces prefix only (see `tests/test_markdown.py`).
+- [x] Objects without index entry unchanged (`tests/test_enrich.py`).
+- [x] No file write in this slice.
 
 ## URL normalization
 
