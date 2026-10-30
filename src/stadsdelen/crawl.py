@@ -8,8 +8,18 @@ from urllib.parse import urlparse
 import httpx
 from bs4 import BeautifulSoup
 
-from stadsdelen.discovery import DistrictPage, SLUG_TO_LABEL, is_district_overview_url
-from stadsdelen.http import fetch_text, is_blocked_or_error_page
+from stadsdelen.discovery import (
+    SLUG_TO_LABEL,
+    WARMUP_URLS,
+    DistrictPage,
+    is_district_overview_url,
+)
+from stadsdelen.http import (
+    create_client,
+    is_blocked_or_error_page,
+    warm_session,
+)
+from stadsdelen.index import IndexBuilder, UrlToDistrictsIndex
 from stadsdelen.urls import CANONICAL_HOST, resolve
 
 NAV_SLUG_DENYLIST = frozenset(
@@ -32,6 +42,13 @@ class DistrictCrawlStats:
     pages_fetched: int
     subsidy_links_raw: int
     subsidy_links_unique: int
+
+
+@dataclass(frozen=True)
+class CrawlReport:
+    by_district: tuple[DistrictCrawlStats, ...]
+    index_size: int
+    http_failures: tuple[str, ...]
 
 
 def is_subsidy_detail_url(normalized_url: str) -> bool:
@@ -68,8 +85,9 @@ def parse_subsidy_links(html: str, *, page_url: str) -> list[str]:
     resultaten = soup.select(".resultaten")
     roots = resultaten if resultaten else [soup]
 
+    link_selectors = ".resultaat h2.link a[href], .resultaat .link a[href]"
     for root in roots:
-        for anchor in root.select(".resultaat h2.link a[href], .resultaat .link a[href]"):
+        for anchor in root.select(link_selectors):
             href = anchor.get("href", "").strip()
             if not href or href.startswith("#") or href.startswith("mailto:"):
                 continue
@@ -119,7 +137,8 @@ def crawl_district_subsidy_urls(
     page_url: str | None = district.url
 
     while page_url is not None and pages_fetched < max_pages:
-        response, text = fetch_text(page_url, client=client)
+        response = client.get(page_url)
+        text = response.text
         pages_fetched += 1
         current_url = str(response.url)
         if is_blocked_or_error_page(response, text):
@@ -149,3 +168,47 @@ def crawl_district_subsidy_urls(
         subsidy_links_unique=len(unique),
     )
     return unique, stats
+
+
+def build_subsidy_index(
+    district_pages: list[DistrictPage],
+    *,
+    client: httpx.Client | None = None,
+) -> tuple[UrlToDistrictsIndex, CrawlReport]:
+    """Crawl district overview pages and merge subsidy URLs into one index."""
+    own_client = client is None
+    http = client if client is not None else create_client(timeout=30.0)
+    builder = IndexBuilder()
+    stats_list: list[DistrictCrawlStats] = []
+    failures: list[str] = []
+    districts_ok = 0
+
+    try:
+        if own_client:
+            warm_session(http, WARMUP_URLS)
+        for district in district_pages:
+            try:
+                urls, stats = crawl_district_subsidy_urls(district, client=http)
+            except CrawlError as exc:
+                failures.append(f"{district.url}: {exc}")
+                continue
+            stats_list.append(stats)
+            builder.add_district_urls(urls, stats.label)
+            districts_ok += 1
+    finally:
+        if own_client:
+            http.close()
+
+    index = builder.finalize()
+    if districts_ok == 0 or not index:
+        raise CrawlError(
+            "Crawl produced no subsidy URLs "
+            f"({districts_ok} districts succeeded, {len(failures)} failed)"
+        )
+
+    report = CrawlReport(
+        by_district=tuple(stats_list),
+        index_size=len(index),
+        http_failures=tuple(failures),
+    )
+    return index, report
