@@ -2,6 +2,7 @@
 
 __version__ = "0.1.0"
 
+from stadsdelen.cli import app, run_enrich
 from stadsdelen.crawl import (
     CrawlError,
     CrawlReport,
@@ -15,7 +16,12 @@ from stadsdelen.discovery import (
     parse_district_pages,
 )
 from stadsdelen.index import UrlToDistrictsIndex
-from stadsdelen.json_io import JsonLoadError, load_subsidy_array
+from stadsdelen.json_io import (
+    JsonLoadError,
+    JsonSaveError,
+    load_subsidy_array,
+    save_subsidy_array,
+)
 from stadsdelen.markdown import (
     MarkdownUpdateStatus,
     enrich_matched_rows,
@@ -28,7 +34,9 @@ from stadsdelen.reporting import (
     MatchedRow,
     MatchResult,
     UnmatchedRow,
+    format_crawl_report,
     format_enrich_report,
+    format_enrich_run_summary,
     format_match_report,
 )
 from stadsdelen.urls import normalize, resolve
@@ -40,17 +48,21 @@ __all__ = [
     "DistrictPage",
     "EnrichResult",
     "JsonLoadError",
+    "JsonSaveError",
     "MarkdownUpdateStatus",
     "MatchedRow",
     "MatchResult",
     "UnmatchedRow",
     "UrlToDistrictsIndex",
     "__version__",
+    "app",
     "build_subsidy_index",
     "discover_district_pages",
     "enrich_matched_rows",
     "enrich_subsidies",
+    "format_crawl_report",
     "format_enrich_report",
+    "format_enrich_run_summary",
     "format_match_report",
     "is_district_overview_url",
     "load_subsidy_array",
@@ -59,5 +71,7 @@ __all__ = [
     "normalize",
     "parse_district_pages",
     "resolve",
+    "run_enrich",
+    "save_subsidy_array",
     "update_markdown",
 ]
