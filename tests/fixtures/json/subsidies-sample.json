@@ -1,0 +1,23 @@
+[
+  {
+    "id": "row-1",
+    "title": "Shared city-wide regeling",
+    "url": "https://www.amsterdam.nl/subsidies/city-wide-regeling/",
+    "markdown": "First body paragraph."
+  },
+  {
+    "id": "row-2",
+    "url": "http://amsterdam.nl/subsidies/bewonersinitiatieven-centrum",
+    "markdown": "Centrum-only body."
+  },
+  {
+    "id": "row-3",
+    "url": "https://www.amsterdam.nl/subsidies/unknown-regeling",
+    "markdown": "Not listed on stadsdeel pages."
+  },
+  {
+    "id": "row-4",
+    "url": "not-a-valid-url",
+    "markdown": "Invalid URL for normalize."
+  }
+]
