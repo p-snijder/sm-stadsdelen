@@ -2,7 +2,13 @@ from pathlib import Path
 
 import pytest
 
-from stadsdelen.discovery import DistrictPage, parse_district_pages
+from stadsdelen.discovery import (
+    DiscoveryError,
+    DistrictPage,
+    discover_district_pages,
+    parse_district_pages,
+)
+from stadsdelen.http import ERROR_PAGE_TITLE_FRAGMENT, create_client
 
 ENTRY = "https://www.amsterdam.nl/subsidies/subsidies-onderwerp/"
 
@@ -82,3 +88,29 @@ def test_parse_entry_fixture_finds_eight_stadsdeel_links() -> None:
     assert pages[4].url == (
         "https://www.amsterdam.nl/subsidies/subsidies-stadsgebied-weesp"
     )
+
+
+def test_discover_district_pages_uses_mocked_entry_html(httpx_mock: object) -> None:
+    html = (FIXTURE_DIR / "entry-subsidies-onderwerp.html").read_text(encoding="utf-8")
+    httpx_mock.add_response(text=html)
+    with create_client() as client:
+        pages = discover_district_pages(ENTRY, client=client)
+    assert len(pages) == 8
+    assert pages[0].slug == "centrum"
+
+
+def test_discover_district_pages_raises_on_blocked_response(
+    httpx_mock: object,
+) -> None:
+    httpx_mock.add_response(
+        status_code=403,
+        text=f"<html><title>{ERROR_PAGE_TITLE_FRAGMENT}</title></html>",
+    )
+    with create_client() as client, pytest.raises(DiscoveryError, match="Blocked"):
+        discover_district_pages(ENTRY, client=client)
+
+
+@pytest.mark.network
+def test_discover_district_pages_live_smoke() -> None:
+    pages = discover_district_pages(ENTRY)
+    assert len(pages) >= 7
