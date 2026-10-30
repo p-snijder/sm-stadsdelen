@@ -63,7 +63,8 @@ def main() -> int:
     links = parse_subsidy_links(text, page_url=page_url)
     if len(links) < args.min_links:
         print(
-            f"Only {len(links)} subsidy links parsed; expected at least {args.min_links}.",
+            f"Only {len(links)} subsidy links parsed; "
+            f"expected at least {args.min_links}.",
             file=sys.stderr,
         )
         return 1
