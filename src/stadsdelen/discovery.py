@@ -17,6 +17,23 @@ SLUG_DENYLIST = frozenset(
     }
 )
 
+DISTRICT_OVERVIEW_SLUGS = frozenset(
+    {
+        "centrum",
+        "nieuwwest",
+        "noord",
+        "oost",
+        "subsidies-stadsgebied-weesp",
+        "west",
+        "zuid",
+        "zuidoost",
+    }
+)
+
+CANONICAL_SLUG: dict[str, str] = {
+    "subsidies-stadsgebied-weesp": "weesp",
+}
+
 SLUG_TO_LABEL: dict[str, str] = {
     "centrum": "Centrum",
     "noord": "Noord",
@@ -53,9 +70,10 @@ def parse_district_pages(html: str, *, page_url: str) -> list[DistrictPage]:
             normalized = resolve(href, page_url)
         except ValueError:
             continue
-        slug = _district_slug_from_url(normalized)
-        if slug is None:
+        path_slug = _district_slug_from_url(normalized)
+        if path_slug is None or path_slug not in DISTRICT_OVERVIEW_SLUGS:
             continue
+        slug = CANONICAL_SLUG.get(path_slug, path_slug)
         label = _label_from_anchor(anchor.get_text(), slug)
         page = DistrictPage(slug=slug, label=label, url=normalized)
         by_url[normalized] = page

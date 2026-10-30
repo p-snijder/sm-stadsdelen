@@ -1,8 +1,12 @@
+from pathlib import Path
+
 import pytest
 
 from stadsdelen.discovery import DistrictPage, parse_district_pages
 
 ENTRY = "https://www.amsterdam.nl/subsidies/subsidies-onderwerp/"
+
+FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "html"
 
 
 def test_parse_district_pages_finds_relative_and_absolute_links() -> None:
@@ -55,3 +59,26 @@ def test_parse_district_pages_label_fallback_for_empty_anchor() -> None:
 def test_parse_district_pages_skips_non_district_links(href: str) -> None:
     html = f'<a href="{href}">Skip</a>'
     assert parse_district_pages(html, page_url=ENTRY) == []
+
+
+def test_parse_entry_fixture_finds_eight_stadsdeel_links() -> None:
+    html = (FIXTURE_DIR / "entry-subsidies-onderwerp.html").read_text(encoding="utf-8")
+    pages = parse_district_pages(html, page_url=ENTRY)
+    assert [page.slug for page in pages] == [
+        "centrum",
+        "nieuwwest",
+        "noord",
+        "oost",
+        "weesp",
+        "west",
+        "zuid",
+        "zuidoost",
+    ]
+    assert pages[0] == DistrictPage(
+        slug="centrum",
+        label="Subsidies Centrum",
+        url="https://www.amsterdam.nl/subsidies/centrum",
+    )
+    assert pages[4].url == (
+        "https://www.amsterdam.nl/subsidies/subsidies-stadsgebied-weesp"
+    )
