@@ -64,6 +64,8 @@ amsterdam.nl often blocks simple bots (HTTP 403 or page title **“Er is iets mi
 
 The HTTP client warms cookies via [`stadsdelen.http`](src/stadsdelen/http.py) before crawling.
 
+Before signing off on a production run, complete [`docs/live-validation.md`](docs/live-validation.md).
+
 ## Implementation notes by slice
 
 **Slice 1:** URL normalization (`stadsdelen.urls`).
