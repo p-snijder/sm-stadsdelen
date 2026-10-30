@@ -1,6 +1,9 @@
+from pathlib import Path
+
 from stadsdelen.crawl import is_subsidy_detail_url, parse_subsidy_links
 
 DISTRICT_PAGE = "https://www.amsterdam.nl/subsidies/centrum/"
+FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "html"
 
 
 def test_is_subsidy_detail_url_accepts_regulation_paths() -> None:
@@ -70,3 +73,23 @@ def test_parse_subsidy_links_dedupes_normalized_urls() -> None:
     </div>
     """
     assert len(parse_subsidy_links(html, page_url=DISTRICT_PAGE)) == 1
+
+
+def test_parse_district_centrum_fixture() -> None:
+    html = (FIXTURE_DIR / "district-centrum.html").read_text(encoding="utf-8")
+    links = parse_subsidy_links(html, page_url=DISTRICT_PAGE)
+    assert links == [
+        "https://www.amsterdam.nl/subsidies/aanpak-binnenstad",
+        "https://www.amsterdam.nl/subsidies/bewonersinitiatieven-centrum",
+        "https://www.amsterdam.nl/subsidies/city-wide-regeling",
+    ]
+
+
+def test_parse_district_noord_fixture() -> None:
+    html = (FIXTURE_DIR / "district-noord.html").read_text(encoding="utf-8")
+    page = "https://www.amsterdam.nl/subsidies/noord/"
+    links = parse_subsidy_links(html, page_url=page)
+    assert links == [
+        "https://www.amsterdam.nl/subsidies/buurtbudgetten-noord",
+        "https://www.amsterdam.nl/subsidies/city-wide-regeling",
+    ]
