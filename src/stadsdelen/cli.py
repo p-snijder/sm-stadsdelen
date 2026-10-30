@@ -15,7 +15,7 @@ from stadsdelen.discovery import (
     DiscoveryError,
     discover_district_pages,
 )
-from stadsdelen.http import create_client, warm_session
+from stadsdelen.http import create_client, resolve_browser_fetch, warm_session
 from stadsdelen.index import UrlToDistrictsIndex
 from stadsdelen.json_io import (
     JsonLoadError,
@@ -97,15 +97,21 @@ def run_crawl(
     *,
     entry_url: str = DEFAULT_ENTRY_URL,
     request_delay_seconds: float = 0.0,
+    browser_fetch: bool | None = None,
     client: httpx.Client | None = None,
 ) -> CrawlRunResult:
     """Discover districts, crawl subsidy links, and write index cache."""
     log = get_logger("cli")
     own_client = client is None
+    use_browser_fetch = resolve_browser_fetch(cli_flag=browser_fetch)
     http = (
         client
         if client is not None
-        else create_client(timeout=30.0, request_delay_seconds=request_delay_seconds)
+        else create_client(
+            timeout=30.0,
+            request_delay_seconds=request_delay_seconds,
+            browser_fetch=use_browser_fetch,
+        )
     )
 
     try:
@@ -136,6 +142,7 @@ def run_enrich(
     map_out: Path | None = None,
     strict: bool = False,
     request_delay_seconds: float = 0.0,
+    browser_fetch: bool | None = None,
     client: httpx.Client | None = None,
 ) -> EnrichRunResult:
     """Crawl (unless index or map-in), match, enrich, and optionally save JSON."""
@@ -144,9 +151,14 @@ def run_enrich(
     cache_entry_url: str | None = None
     needs_http = index is None and map_in is None
     own_client = needs_http and client is None
+    use_browser_fetch = resolve_browser_fetch(cli_flag=browser_fetch)
     http = client
     if needs_http and http is None:
-        http = create_client(timeout=30.0, request_delay_seconds=request_delay_seconds)
+        http = create_client(
+            timeout=30.0,
+            request_delay_seconds=request_delay_seconds,
+            browser_fetch=use_browser_fetch,
+        )
 
     try:
         if index is None and map_in is not None:
@@ -257,6 +269,14 @@ def enrich_cmd(
         min=0.0,
         help="Seconds to wait after each HTTP response (live crawl only).",
     ),
+    browser_fetch: bool = typer.Option(
+        False,
+        "--browser-fetch",
+        help=(
+            "Use curl-cffi TLS impersonation for live HTTP "
+            "(requires `uv sync --extra browser`)."
+        ),
+    ),
 ) -> None:
     """Run the enrich pipeline when ``stadsdelen enrich PATH`` is invoked."""
     if ctx.invoked_subcommand is not None:
@@ -271,6 +291,7 @@ def enrich_cmd(
             map_out=map_out,
             strict=strict,
             request_delay_seconds=request_delay,
+            browser_fetch=browser_fetch,
         )
     except (
         CrawlError,
@@ -306,6 +327,14 @@ def crawl_cmd(
         min=0.0,
         help="Seconds to wait after each HTTP response.",
     ),
+    browser_fetch: bool = typer.Option(
+        False,
+        "--browser-fetch",
+        help=(
+            "Use curl-cffi TLS impersonation for live HTTP "
+            "(requires `uv sync --extra browser`)."
+        ),
+    ),
 ) -> None:
     """Run crawl when ``stadsdelen crawl --map-out PATH`` is invoked."""
     if ctx.invoked_subcommand is not None:
@@ -315,6 +344,7 @@ def crawl_cmd(
             map_out,
             entry_url=entry_url,
             request_delay_seconds=request_delay,
+            browser_fetch=browser_fetch,
         )
     except (CrawlError, DiscoveryError, MapCacheError) as exc:
         typer.echo(str(exc), err=True)

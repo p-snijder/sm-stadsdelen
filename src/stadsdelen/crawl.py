@@ -15,6 +15,7 @@ from stadsdelen.discovery import (
     is_district_overview_url,
 )
 from stadsdelen.http import (
+    blocked_fetch_hint,
     create_client,
     is_blocked_or_error_page,
     warm_session,
@@ -145,6 +146,7 @@ def crawl_district_subsidy_urls(
             msg = (
                 f"Blocked or error page when fetching district overview "
                 f"(HTTP {response.status_code}): {current_url}"
+                f"{blocked_fetch_hint()}"
             )
             raise CrawlError(msg)
 

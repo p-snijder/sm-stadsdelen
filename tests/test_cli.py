@@ -1,6 +1,6 @@
 import shutil
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
 
@@ -128,6 +128,46 @@ def test_crawl_writes_map_out_with_mocked_http(
     assert map_path.exists()
     assert load_index_cache(map_path) == sample_match_index
     assert "Subsidy URLs indexed: 2" in result.stderr + result.stdout
+
+
+def test_crawl_browser_fetch_enables_create_client_flag(
+    tmp_path: Path,
+    sample_match_index: UrlToDistrictsIndex,
+) -> None:
+    map_path = tmp_path / "index.json"
+    districts = [
+        DistrictPage(
+            slug="centrum",
+            label="Subsidies Centrum",
+            url="https://www.amsterdam.nl/subsidies/centrum",
+        ),
+    ]
+    report = CrawlReport(
+        by_district=(),
+        index_size=len(sample_match_index),
+        http_failures=(),
+    )
+    fake_client = MagicMock()
+    with (
+        patch("stadsdelen.cli.create_client", return_value=fake_client) as mock_create,
+        patch("stadsdelen.cli.warm_session"),
+        patch("stadsdelen.cli.discover_district_pages", return_value=districts),
+        patch(
+            "stadsdelen.cli.build_subsidy_index",
+            return_value=(sample_match_index, report),
+        ),
+    ):
+        result = runner.invoke(
+            app,
+            ["crawl", "--browser-fetch", "--map-out", str(map_path)],
+        )
+    assert result.exit_code == 0, result.stdout + result.stderr
+    mock_create.assert_called_once_with(
+        timeout=30.0,
+        request_delay_seconds=0.0,
+        browser_fetch=True,
+    )
+    fake_client.close.assert_called_once()
 
 
 def test_enrich_map_in_skips_live_crawl(
