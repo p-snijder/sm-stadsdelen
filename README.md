@@ -6,7 +6,9 @@ Python tool to crawl Amsterdam **stadsdeel** subsidy overview pages, build a sub
 
 **Slice 2:** Entry-page district discovery (`stadsdelen.discovery`).
 
-**Slice 3:** District crawl and subsidy URL index (`stadsdelen.crawl`, `stadsdelen.index`). JSON enrichment and CLI are not implemented yet.
+**Slice 3:** District crawl and subsidy URL index (`stadsdelen.crawl`, `stadsdelen.index`).
+
+**Slice 4:** JSON load, URL match against index, dry-run reporting (`stadsdelen.json_io`, `stadsdelen.match`, `stadsdelen.reporting`). Markdown enrichment and CLI are not implemented yet.
 
 ## Prerequisites
 
@@ -91,6 +93,29 @@ uv run pytest -m network tests/test_crawl.py::test_build_subsidy_index_live_smok
 - [x] Pagination covered via two-page zuid fixtures + `startagain` parser.
 - [x] Same subsidy URL on two districts yields two labels in the index.
 - [x] `CrawlReport.by_district` exposes per-district link counts.
+
+## JSON load and match (slice 4)
+
+Load a user JSON **array** and match each object’s `url` to a `UrlToDistrictsIndex` (from crawl or tests). **No `markdown` changes and no file write** in this slice—slice 5 enriches; slice 6 saves in place.
+
+**Required fields:** each object must have string `url` and string `markdown`. All other keys are preserved on load.
+
+**Sample fixture:** [`tests/fixtures/json/subsidies-sample.json`](tests/fixtures/json/subsidies-sample.json) (synthetic URLs aligned with slice 3 HTML fixtures).
+
+API:
+
+- `load_subsidy_array(path)` — validate array; raise `JsonLoadError` on invalid input.
+- `match_subsidies(records, index)` — normalize JSON URLs with `urls.normalize`, lookup index keys.
+- `match_subsidies_file(json_path, index)` — load + match; returns `(records, MatchResult)`.
+- `format_match_report(result)` — human-readable matched/unmatched summary for dry-run.
+
+**Unmatched rows:** `not_in_index` when normalization succeeds but the URL is absent from the index; `normalize_failed` when `url` cannot be normalized. Unmatched URLs are reported, not fatal (unless a future `--strict` flag).
+
+### Slice 4 acceptance
+
+- [x] Invalid JSON / non-array / missing `url` or `markdown` fails fast with clear `JsonLoadError`.
+- [x] Unmatched URLs listed; matched count correct on synthetic fixture (`uv run pytest`).
+- [x] No output file write; matching is side-effect free on disk.
 
 ## URL normalization
 
