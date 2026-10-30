@@ -28,6 +28,18 @@ Offline tests exclude live HTTP by default. To run the optional smoke test again
 uv run pytest -m network
 ```
 
+### Continuous integration
+
+GitHub Actions runs the same checks on every push and pull request to `main` (see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)):
+
+```bash
+uv sync --frozen
+uv run ruff check . && uv run ruff format --check .
+uv run pytest
+```
+
+Network tests are not part of CI; run them locally with `uv run pytest -m network` when validating against amsterdam.nl.
+
 ## District discovery (slice 2)
 
 Default entry URL:
