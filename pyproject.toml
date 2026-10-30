@@ -29,3 +29,9 @@ line-length = 88
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
+
+[tool.pytest.ini_options]
+addopts = "-m 'not network'"
+markers = [
+    "network: live HTTP tests against amsterdam.nl (run with -m network)",
+]
