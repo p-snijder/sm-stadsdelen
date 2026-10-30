@@ -167,6 +167,14 @@ def _fallback_enabled(allow_fallback: bool | None) -> bool:
     return os.environ.get(FALLBACK_ENV_VAR, "").strip() in {"1", "true", "yes"}
 
 
+def is_district_overview_url(url: str) -> bool:
+    """Return True when ``url`` is a stadsdeel subsidy overview page."""
+    path_slug = _district_slug_from_url(url)
+    if path_slug is None:
+        return False
+    return path_slug in DISTRICT_OVERVIEW_SLUGS
+
+
 def _district_slug_from_url(url: str) -> str | None:
     parsed = urlparse(url)
     host = parsed.hostname.lower() if parsed.hostname else ""

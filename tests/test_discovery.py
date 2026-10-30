@@ -6,6 +6,7 @@ from stadsdelen.discovery import (
     DiscoveryError,
     DistrictPage,
     discover_district_pages,
+    is_district_overview_url,
     parse_district_pages,
 )
 from stadsdelen.http import ERROR_PAGE_TITLE_FRAGMENT, create_client
@@ -13,6 +14,17 @@ from stadsdelen.http import ERROR_PAGE_TITLE_FRAGMENT, create_client
 ENTRY = "https://www.amsterdam.nl/subsidies/subsidies-onderwerp/"
 
 FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "html"
+
+
+def test_is_district_overview_url() -> None:
+    assert is_district_overview_url("https://www.amsterdam.nl/subsidies/centrum")
+    assert is_district_overview_url("https://www.amsterdam.nl/subsidies/zuidoost/")
+    assert not is_district_overview_url(
+        "https://www.amsterdam.nl/subsidies/subsidies-onderwerp/foo"
+    )
+    assert not is_district_overview_url(
+        "https://www.amsterdam.nl/subsidies/bewonersinitiatieven-centrum"
+    )
 
 
 def test_parse_district_pages_finds_relative_and_absolute_links() -> None:
