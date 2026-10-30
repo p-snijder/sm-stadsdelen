@@ -1,6 +1,10 @@
 from pathlib import Path
 
+import pytest
+
 from stadsdelen.crawl import (
+    CrawlError,
+    build_subsidy_index,
     crawl_district_subsidy_urls,
     is_subsidy_detail_url,
     parse_pagination_next_url,
@@ -75,7 +79,8 @@ def test_parse_subsidy_links_dedupes_normalized_urls() -> None:
         <h2 class="link"><a href="/subsidies/foo/">One</a></h2>
       </div>
       <div class="resultaat">
-        <h2 class="link"><a href="https://www.amsterdam.nl/subsidies/foo">One again</a></h2>
+        <h2 class="link"><a href="https://www.amsterdam.nl/subsidies/foo">
+        One again</a></h2>
       </div>
     </div>
     """
@@ -120,13 +125,15 @@ def test_parse_pagination_next_url_returns_none_when_missing() -> None:
 def test_crawl_district_subsidy_urls_follows_pagination(httpx_mock: object) -> None:
     page1 = """
     <div class="resultaten">
-      <div class="resultaat"><h2 class="link"><a href="/subsidies/page-one/">One</a></h2></div>
+      <div class="resultaat"><h2 class="link">
+        <a href="/subsidies/page-one/">One</a></h2></div>
       <a class="startagain" href="/subsidies/zuid/pagina-2/">Volgende</a>
     </div>
     """
     page2 = """
     <div class="resultaten">
-      <div class="resultaat"><h2 class="link"><a href="/subsidies/page-two/">Two</a></h2></div>
+      <div class="resultaat"><h2 class="link">
+        <a href="/subsidies/page-two/">Two</a></h2></div>
     </div>
     """
     district = DistrictPage(
@@ -175,3 +182,87 @@ def test_pagination_fixtures_collect_links_from_both_pages(httpx_mock: object) -
         "https://www.amsterdam.nl/subsidies/zuid-regeling-beta",
     ]
     assert stats.pages_fetched == 2
+
+
+def test_build_subsidy_index_merges_shared_url_across_districts(
+    httpx_mock: object,
+) -> None:
+    centrum_html = (FIXTURE_DIR / "district-centrum.html").read_text(encoding="utf-8")
+    noord_html = (FIXTURE_DIR / "district-noord.html").read_text(encoding="utf-8")
+    httpx_mock.add_response(text=centrum_html)
+    httpx_mock.add_response(text=noord_html)
+    districts = [
+        DistrictPage(
+            slug="centrum",
+            label="Subsidies Centrum",
+            url="https://www.amsterdam.nl/subsidies/centrum",
+        ),
+        DistrictPage(
+            slug="noord",
+            label="Subsidies Noord",
+            url="https://www.amsterdam.nl/subsidies/noord",
+        ),
+    ]
+    with create_client() as client:
+        index, report = build_subsidy_index(districts, client=client)
+    shared = "https://www.amsterdam.nl/subsidies/city-wide-regeling"
+    assert index[shared] == ["Subsidies Centrum", "Subsidies Noord"]
+    assert report.index_size == 4
+    assert len(report.by_district) == 2
+    assert report.http_failures == ()
+
+
+def test_build_subsidy_index_records_http_failure(httpx_mock: object) -> None:
+    httpx_mock.add_response(
+        status_code=403,
+        text="<html><title>Er is iets mis gegaan</title></html>",
+    )
+    districts = [
+        DistrictPage(
+            slug="centrum",
+            label="Centrum",
+            url="https://www.amsterdam.nl/subsidies/centrum",
+        ),
+    ]
+    with create_client() as client, pytest.raises(CrawlError):
+        build_subsidy_index(districts, client=client)
+
+
+def test_build_subsidy_index_partial_failure_still_builds_index(
+    httpx_mock: object,
+) -> None:
+    centrum_html = (FIXTURE_DIR / "district-centrum.html").read_text(encoding="utf-8")
+    httpx_mock.add_response(text=centrum_html)
+    httpx_mock.add_response(
+        status_code=403,
+        text="<html><title>Er is iets mis gegaan</title></html>",
+    )
+    districts = [
+        DistrictPage(
+            slug="centrum",
+            label="Subsidies Centrum",
+            url="https://www.amsterdam.nl/subsidies/centrum",
+        ),
+        DistrictPage(
+            slug="noord",
+            label="Subsidies Noord",
+            url="https://www.amsterdam.nl/subsidies/noord",
+        ),
+    ]
+    with create_client() as client:
+        index, report = build_subsidy_index(districts, client=client)
+    assert len(index) == 3
+    assert len(report.http_failures) == 1
+    assert "noord" in report.http_failures[0].lower()
+
+
+@pytest.mark.network
+def test_build_subsidy_index_live_smoke() -> None:
+    from stadsdelen.discovery import discover_district_pages
+
+    districts = discover_district_pages(
+        "https://www.amsterdam.nl/subsidies/subsidies-onderwerp/"
+    )[:2]
+    index, report = build_subsidy_index(districts)
+    assert report.index_size >= 1
+    assert len(report.by_district) >= 1
